@@ -6,7 +6,6 @@
 <title>FORGE 3D — Professional Edition</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 
-<!-- Firebase (Optional / Offline Ready) -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -97,10 +96,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:va
 </head>
 <body>
 
-<!-- CANVAS -->
 <div id="canvas-wrap"><canvas id="forge-canvas"></canvas></div>
 
-<!-- LEFT DASHBOARD (Main Tools Only) -->
 <div id="left-bar">
   <div class="brand" style="margin-bottom:12px; writing-mode:vertical-rl; transform:rotate(180deg); letter-spacing:4px; font-size:14px; color:var(--c-accent);">FORGE</div>
   
@@ -123,9 +120,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:va
   </button>
 </div>
 
-<!-- TOP DASHBOARD (Windows Toggles & Actions) -->
 <div id="top-bar">
-  <!-- Asset Browser Toggle -->
   <button class="icon-btn" onclick="toggleWindow('win-assets')" title="Asset Browser (Shapes & Models)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
   </button>
@@ -138,12 +133,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:va
   
   <div class="spacer"></div>
 
-  <!-- Windows Toggles -->
   <button class="icon-btn" onclick="toggleWindow('win-scene')" title="Scene Hierarchy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
   <button class="icon-btn" onclick="toggleWindow('win-props')" title="Properties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
 </div>
 
-<!-- STATUS BAR -->
 <div id="status-bar">
   <div style="display:flex;align-items:center;gap:6px;">
     <div id="status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--c-green);"></div>
@@ -153,50 +146,38 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:va
   <span>Objects: <span id="sb-count" style="color:var(--c-text);">0</span></span>
 </div>
 
-<!-- FLOATING HUD -->
 <div id="hud">
   <div><span style="color:var(--gizmo-x)">X</span> <span id="hx">0.00</span></div>
   <div><span style="color:var(--gizmo-y)">Y</span> <span id="hy">0.00</span></div>
   <div><span style="color:var(--gizmo-z)">Z</span> <span id="hz">0.00</span></div>
 </div>
 
-<!-- ==========================================
-     WINDOWS / PANELS
-=========================================== -->
-
-<!-- 1. ASSET BROWSER (Left Side) -->
 <div id="win-assets" class="window-panel left-window">
   <div class="win-head">Asset Browser <button class="win-close" onclick="toggleWindow('win-assets')">✖</button></div>
   <div class="win-body">
-    
-    <!-- Custom Import -->
     <div class="sec-title">Custom Assets</div>
     <button class="asset-btn import-btn" onclick="document.getElementById('file-input').click()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Import Character / Vehicle (.gltf, .glb, .obj)
     </button>
     <input type="file" id="file-input" accept=".gltf,.glb,.obj" onchange="ImportManager.handleFile(event)">
-
-    <!-- Primitives -->
     <div class="sec-title" style="margin-top:16px;">Basic Shapes</div>
     <div class="grid-2">
-      <button class="asset-btn" onclick="ObjectManager.spawn('cube')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Cube</button>
-      <button class="asset-btn" onclick="ObjectManager.spawn('sphere')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>Sphere</button>
-      <button class="asset-btn" onclick="ObjectManager.spawn('cylinder')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5c-4.4 0-8 1.3-8 3 0 1.7 3.6 3 8 3s8-1.3 8-3c0-1.7-3.6-3-8-3z"/><path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8"/></svg>Cylinder</button>
-      <button class="asset-btn" onclick="ObjectManager.spawn('cone')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 20h20L12 2z"/></svg>Cone</button>
-      <button class="asset-btn" onclick="ObjectManager.spawn('torus')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>Torus</button>
-      <button class="asset-btn" onclick="ObjectManager.spawn('plane')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18l6-12h12l-6 12H3z"/></svg>Plane</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('cube')">Cube</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('sphere')">Sphere</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('cylinder')">Cylinder</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('cone')">Cone</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('torus')">Torus</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('plane')">Plane</button>
     </div>
   </div>
 </div>
 
-<!-- 2. SCENE HIERARCHY (Right Side) -->
 <div id="win-scene" class="window-panel">
   <div class="win-head">Scene Hierarchy <button class="win-close" onclick="toggleWindow('win-scene')">✖</button></div>
   <div class="win-body" id="scene-list" style="padding:0;"></div>
 </div>
 
-<!-- 3. PROPERTIES (Right Side) -->
 <div id="win-props" class="window-panel">
   <div class="win-head">Properties <button class="win-close" onclick="toggleWindow('win-props')">✖</button></div>
   <div class="win-body" id="props-body">
@@ -204,7 +185,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:va
   </div>
 </div>
 
-<!-- THREE.JS & LOADERS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
@@ -214,7 +194,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:va
 <script>
 'use strict';
 // ==========================================
-// FORGE 3D — Core Engine
+// FORGE 3D — Core Engine + Rigging Module
 // ==========================================
 
 const State = { objects: [], selected: null, tool: 'translate', space: 'world', snap: false, cnt: 0 };
@@ -234,17 +214,14 @@ const Engine = {
     camera = new THREE.PerspectiveCamera(50, wrap.clientWidth/wrap.clientHeight, 0.1, 1000);
     camera.position.set(8, 6, 10);
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight.position.set(10, 20, 10); dirLight.castShadow = true; scene.add(dirLight);
 
-    // Environment
     scene.add(new THREE.GridHelper(40, 40, 0x444444, 0x333333));
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.ShadowMaterial({opacity:0.4}));
     ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-    // Controls
     orbitCtrl = new THREE.OrbitControls(camera, renderer.domElement);
     xformCtrl = new THREE.TransformControls(camera, renderer.domElement);
     scene.add(xformCtrl);
@@ -252,13 +229,11 @@ const Engine = {
     xformCtrl.addEventListener('dragging-changed', e => { orbitCtrl.enabled = !e.value; if(!e.value) StorageManager.save(); });
     xformCtrl.addEventListener('objectChange', () => UI.update());
 
-    // Resize
     new ResizeObserver(() => {
       renderer.setSize(wrap.clientWidth, wrap.clientHeight);
       camera.aspect = wrap.clientWidth / wrap.clientHeight; camera.updateProjectionMatrix();
     }).observe(wrap);
 
-    // Click to select
     const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
     renderer.domElement.addEventListener('pointerdown', e => {
       if(xformCtrl.dragging) return;
@@ -269,7 +244,6 @@ const Engine = {
       const hits = raycaster.intersectObjects(State.objects.map(o=>o.mesh), true);
       
       if(hits.length > 0) {
-        // Find top level parent in our State
         let obj = hits[0].object;
         while(obj.parent && obj.parent.type !== 'Scene' && !State.objects.find(o=>o.mesh===obj)) { obj = obj.parent; }
         const idx = State.objects.findIndex(o=>o.mesh===obj);
@@ -279,7 +253,7 @@ const Engine = {
       }
     });
 
-    StorageManager.loadLocal(); // Load offline data
+    StorageManager.loadLocal();
     this.animate();
   },
   animate() { requestAnimationFrame(()=>Engine.animate()); orbitCtrl.update(); renderer.render(scene, camera); }
@@ -309,7 +283,7 @@ const ObjectManager = {
     State.objects.push({ mesh, name, type: baseName });
     this.select(State.objects.length - 1);
     StorageManager.save();
-    toggleWindow(null); // close asset browser
+    toggleWindow(null); 
   },
   select(idx) {
     State.selected = idx;
@@ -322,7 +296,7 @@ const ObjectManager = {
   }
 };
 
-/* ── IMPORT SYSTEM (Characters/Vehicles) ── */
+/* ── IMPORT SYSTEM + RIGGING LOGIC ── */
 const ImportManager = {
   handleFile(e) {
     const file = e.target.files[0]; if(!file) return;
@@ -334,9 +308,25 @@ const ImportManager = {
     if(ext === 'gltf' || ext === 'glb') {
       new THREE.GLTFLoader().load(url, (gltf) => {
         const model = gltf.scene;
+
+        // Auto Scale & Center
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3()).length();
+        if (size > 0) model.scale.setScalar(3 / size);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center.multiplyScalar(3 / size));
+        model.position.y = 0;
+
         model.traverse(c => { if(c.isMesh){ c.castShadow=true; c.receiveShadow=true; } });
+
+        // SKELETON LOGIC ADDED HERE
+        const skeletonHelper = new THREE.SkeletonHelper(model);
+        skeletonHelper.visible = false; // Hidden by default
+        skeletonHelper.name = "FORGE_Skeleton"; // Tag it for toggling
+        model.add(skeletonHelper); // Attach to model
+
         ObjectManager.addMeshToScene(model, file.name.split('.')[0]);
-        document.getElementById('status-text').textContent = "Asset Loaded";
+        document.getElementById('status-text').textContent = "Asset Loaded | Press 'S' to Toggle Skeleton";
       });
     } else if(ext === 'obj') {
       new THREE.OBJLoader().load(url, (obj) => {
@@ -349,6 +339,21 @@ const ImportManager = {
     }
   }
 };
+
+/* ── TOGGLE SKELETON WITH 'S' KEY ── */
+window.addEventListener('keydown', e => {
+  if (e.key === 's' || e.key === 'S') {
+    let toggled = false;
+    State.objects.forEach(obj => {
+      const helper = obj.mesh.getObjectByName("FORGE_Skeleton");
+      if(helper) {
+        helper.visible = !helper.visible;
+        toggled = true;
+      }
+    });
+    if(toggled) document.getElementById('status-text').textContent = "Skeleton Toggled";
+  }
+});
 
 /* ── UI CONTROLLER ── */
 const UI = {
@@ -387,7 +392,6 @@ const UI = {
       <div class="row"><span class="lbl" style="color:var(--gizmo-z)">Z</span><input class="inp" id="pz" type="number" value="${p.z.toFixed(2)}" step="0.5" onchange="UI.applyXform()"></div>
     `;
 
-    // Only show material controls if it's a simple mesh (not imported group)
     if(m.geometry && m.material) {
       html += `
         <div class="sec-title" style="margin-top:16px;">Material</div>
@@ -416,18 +420,15 @@ const UI = {
   }
 };
 
-/* ── STORAGE (Dual Save: Firebase + Local Offline) ── */
+/* ── STORAGE (Dual Save) ── */
 const StorageManager = {
   save() {
-    // 1. Save to LocalStorage (Immediate Offline Support)
     const data = State.objects.map(o => ({ n:o.name, t:o.type, px:o.mesh.position.x, py:o.mesh.position.y, pz:o.mesh.position.z }));
     localStorage.setItem('forge3d_save', JSON.stringify(data));
     document.getElementById('status-text').textContent = "Saved Locally";
 
-    // 2. Try Firebase (Online Backup)
     if(window._fbReady) {
       document.getElementById('status-dot').style.background = "var(--c-orange)";
-      // Firebase logic would go here
       setTimeout(()=>{
         document.getElementById('status-dot').style.background = "var(--c-green)";
         document.getElementById('status-text').textContent = "Synced to Cloud";
@@ -437,7 +438,6 @@ const StorageManager = {
   loadLocal() {
     const saved = localStorage.getItem('forge3d_save');
     if(saved) {
-      // Basic restore logic for primitives
       const arr = JSON.parse(saved);
       arr.forEach(d => {
         if(['CUBE','SPHERE','CYLINDER','CONE','TORUS','PLANE'].includes(d.t)) {
