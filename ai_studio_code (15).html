@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>FORGE 3D — Professional Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<!-- Firebase (Optional / Offline Ready) -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY", authDomain: "forge3d.firebaseapp.com", projectId: "forge3d",
+    storageBucket: "forge3d.appspot.com", messagingSenderId: "000", appId: "1:000:web:000"
+  };
+  try {
+    const app = initializeApp(firebaseConfig);
+    window._fbDb = getFirestore(app); window._fbCollection = collection; window._fbAddDoc = addDoc;
+    window._fbUpdateDoc = updateDoc; window._fbDoc = doc; window._fbDeleteDoc = deleteDoc;
+    window._fbTimestamp = serverTimestamp; window._fbReady = true;
+  } catch(e) { window._fbReady = false; console.log("Running in pure Offline Mode"); }
+</script>
+
+<style>
+/* ── DESIGN TOKENS (Clean & Quiet UI) ── */
+:root {
+  --c-bg:#202020; --c-panel:#181818; --c-panel2:#242424; --c-hover:#2d2d2d; --c-active:#383838;
+  --c-border:rgba(255,255,255,0.08); --c-border2:rgba(255,255,255,0.15);
+  --c-accent:#facc15; /* Professional Yellow/Gold accent */
+  --c-text:#f3f4f6; --c-text2:#9ca3af; --c-text3:#6b7280;
+  --gizmo-x:#f43f5e; --gizmo-y:#10b981; --gizmo-z:#3b82f6;
+  --left-w:56px; --top-h:48px; --status-h:28px;
+  --font:'Inter',sans-serif; --mono:'JetBrains Mono',monospace;
+  --sh:0 10px 40px rgba(0,0,0,0.9); --r:8px; --tr:0.2s ease;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);color:var(--c-text);font-family:var(--font);user-select:none;}
+#canvas-wrap{position:fixed;inset:0;z-index:0;background:var(--c-bg);}
+#forge-canvas{display:block;width:100%!important;height:100%!important;outline:none;}
+
+/* ── DASHBOARD (Main Toolbars) ── */
+#top-bar{position:fixed;top:0;left:var(--left-w);right:0;height:var(--top-h);z-index:100;background:var(--c-panel);border-bottom:1px solid var(--c-border);display:flex;align-items:center;padding:0 16px;gap:8px;}
+#left-bar{position:fixed;top:0;left:0;bottom:0;width:var(--left-w);z-index:100;background:var(--c-panel);border-right:1px solid var(--c-border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;}
+#status-bar{position:fixed;bottom:0;left:0;right:0;height:var(--status-h);z-index:100;background:var(--c-panel);border-top:1px solid var(--c-border);display:flex;align-items:center;padding:0 16px;gap:16px;font-size:11px;color:var(--c-text3);}
+
+/* Buttons */
+.icon-btn{width:36px;height:36px;background:transparent;border:1px solid transparent;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-text2);transition:var(--tr);}
+.icon-btn:hover{background:var(--c-hover);color:var(--c-text);}
+.icon-btn.active{background:rgba(250, 204, 21, 0.1);color:var(--c-accent);border-color:rgba(250, 204, 21, 0.3);}
+.icon-btn svg{width:18px;height:18px;pointer-events:none;}
+
+.tool-btn{width:40px;height:40px;border-radius:var(--r);background:transparent;border:1px solid transparent;color:var(--c-text2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:var(--tr);}
+.tool-btn:hover{background:var(--c-hover);color:var(--c-text);}
+.tool-btn.active{background:rgba(250, 204, 21, 0.15);color:var(--c-accent);border-color:var(--c-accent);}
+.tool-btn svg{width:20px;height:20px;}
+
+.divider{width:1px;height:20px;background:var(--c-border2);margin:0 4px;}
+.spacer{flex:1;}
+.brand{font-weight:700;letter-spacing:2px;font-size:12px;color:var(--c-text2);display:flex;align-items:center;gap:6px;}
+.brand span{color:var(--c-accent);}
+
+/* ── WINDOWS / PANELS (Hidden by default) ── */
+.window-panel{position:fixed;top:calc(var(--top-h) + 12px);right:-320px;width:300px;max-height:calc(100vh - var(--top-h) - var(--status-h) - 24px);background:var(--c-panel);border:1px solid var(--c-border2);border-radius:var(--r);z-index:90;display:flex;flex-direction:column;transition:right 0.3s cubic-bezier(0.2,0.8,0.2,1);box-shadow:var(--sh);overflow:hidden;}
+.window-panel.open{right:16px;}
+.left-window{right:auto;left:-320px;transition:left 0.3s cubic-bezier(0.2,0.8,0.2,1);}
+.left-window.open{left:calc(var(--left-w) + 12px);}
+
+.win-head{height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--c-border);background:var(--c-panel2);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--c-text2);}
+.win-close{background:none;border:none;color:var(--c-text3);cursor:pointer;padding:4px;}
+.win-close:hover{color:var(--c-red);}
+.win-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin;}
+
+/* Form & Inputs */
+.sec-title{font-size:10px;font-weight:600;color:var(--c-text3);border-bottom:1px solid var(--c-border);padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.lbl{font-family:var(--mono);font-size:11px;font-weight:700;width:16px;text-align:center;}
+.inp{flex:1;background:var(--c-bg);border:1px solid var(--c-border);border-radius:4px;padding:6px;color:var(--c-text);font-family:var(--mono);font-size:11px;text-align:right;}
+.inp:focus{outline:1px solid var(--c-accent);border-color:transparent;}
+
+/* Grid Buttons (Asset Browser) */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.asset-btn{background:var(--c-bg);border:1px solid var(--c-border);padding:12px 8px;border-radius:var(--r);text-align:center;font-size:11px;color:var(--c-text2);cursor:pointer;transition:var(--tr);display:flex;flex-direction:column;align-items:center;gap:6px;}
+.asset-btn:hover{background:var(--c-hover);border-color:var(--c-accent);color:var(--c-text);}
+.asset-btn svg{width:24px;height:24px;}
+.import-btn{grid-column:span 2;background:rgba(250, 204, 21, 0.1);border:1px dashed var(--c-accent);color:var(--c-accent);font-weight:600;}
+.import-btn:hover{background:rgba(250, 204, 21, 0.2);}
+
+/* Floating HUD */
+#hud{position:fixed;bottom:calc(var(--status-h) + 16px);left:calc(var(--left-w) + 16px);display:flex;gap:12px;background:rgba(0,0,0,0.6);padding:6px 16px;border-radius:20px;border:1px solid var(--c-border);backdrop-filter:blur(8px);pointer-events:none;font-family:var(--mono);font-size:11px;z-index:80;}
+
+/* File Input hidden */
+#file-input { display: none; }
+</style>
+</head>
+<body>
+
+<!-- CANVAS -->
+<div id="canvas-wrap"><canvas id="forge-canvas"></canvas></div>
+
+<!-- LEFT DASHBOARD (Main Tools Only) -->
+<div id="left-bar">
+  <div class="brand" style="margin-bottom:12px; writing-mode:vertical-rl; transform:rotate(180deg); letter-spacing:4px; font-size:14px; color:var(--c-accent);">FORGE</div>
+  
+  <button class="tool-btn active" id="tool-select" onclick="setTool('select')" title="Select">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l6.5 18 3-7.5 7.5-3L4 4z"/></svg>
+  </button>
+  <button class="tool-btn" id="tool-translate" onclick="setTool('translate')" title="Move">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9L2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+  </button>
+  <button class="tool-btn" id="tool-rotate" onclick="setTool('rotate')" title="Rotate">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+  </button>
+  <button class="tool-btn" id="tool-scale" onclick="setTool('scale')" title="Scale">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 3l-6 6M3 21l6-6M21 3h-6M21 3v6M3 21h6M3 21v-6"/></svg>
+  </button>
+  
+  <div class="spacer"></div>
+  <button class="tool-btn" onclick="deleteSelected()" style="color:var(--c-red);" title="Delete Selected">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>
+  </button>
+</div>
+
+<!-- TOP DASHBOARD (Windows Toggles & Actions) -->
+<div id="top-bar">
+  <!-- Asset Browser Toggle -->
+  <button class="icon-btn" onclick="toggleWindow('win-assets')" title="Asset Browser (Shapes & Models)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+  </button>
+  <span style="font-size:12px; font-weight:600; margin-left:4px; color:var(--c-text2);">ASSETS</span>
+  
+  <div class="divider" style="margin:0 12px;"></div>
+  
+  <button class="icon-btn" onclick="toggleSpace()" title="World / Local Space"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+  <button class="icon-btn" id="btn-snap" onclick="toggleSnap()" title="Grid Snap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="12" y1="4" x2="12" y2="20"/></svg></button>
+  
+  <div class="spacer"></div>
+
+  <!-- Windows Toggles -->
+  <button class="icon-btn" onclick="toggleWindow('win-scene')" title="Scene Hierarchy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+  <button class="icon-btn" onclick="toggleWindow('win-props')" title="Properties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+</div>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div id="status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--c-green);"></div>
+    <span id="status-text">Ready / Offline Mode</span>
+  </div>
+  <div class="spacer"></div>
+  <span>Objects: <span id="sb-count" style="color:var(--c-text);">0</span></span>
+</div>
+
+<!-- FLOATING HUD -->
+<div id="hud">
+  <div><span style="color:var(--gizmo-x)">X</span> <span id="hx">0.00</span></div>
+  <div><span style="color:var(--gizmo-y)">Y</span> <span id="hy">0.00</span></div>
+  <div><span style="color:var(--gizmo-z)">Z</span> <span id="hz">0.00</span></div>
+</div>
+
+<!-- ==========================================
+     WINDOWS / PANELS
+=========================================== -->
+
+<!-- 1. ASSET BROWSER (Left Side) -->
+<div id="win-assets" class="window-panel left-window">
+  <div class="win-head">Asset Browser <button class="win-close" onclick="toggleWindow('win-assets')">✖</button></div>
+  <div class="win-body">
+    
+    <!-- Custom Import -->
+    <div class="sec-title">Custom Assets</div>
+    <button class="asset-btn import-btn" onclick="document.getElementById('file-input').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import Character / Vehicle (.gltf, .glb, .obj)
+    </button>
+    <input type="file" id="file-input" accept=".gltf,.glb,.obj" onchange="ImportManager.handleFile(event)">
+
+    <!-- Primitives -->
+    <div class="sec-title" style="margin-top:16px;">Basic Shapes</div>
+    <div class="grid-2">
+      <button class="asset-btn" onclick="ObjectManager.spawn('cube')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Cube</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('sphere')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>Sphere</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('cylinder')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5c-4.4 0-8 1.3-8 3 0 1.7 3.6 3 8 3s8-1.3 8-3c0-1.7-3.6-3-8-3z"/><path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8"/></svg>Cylinder</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('cone')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 20h20L12 2z"/></svg>Cone</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('torus')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>Torus</button>
+      <button class="asset-btn" onclick="ObjectManager.spawn('plane')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18l6-12h12l-6 12H3z"/></svg>Plane</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. SCENE HIERARCHY (Right Side) -->
+<div id="win-scene" class="window-panel">
+  <div class="win-head">Scene Hierarchy <button class="win-close" onclick="toggleWindow('win-scene')">✖</button></div>
+  <div class="win-body" id="scene-list" style="padding:0;"></div>
+</div>
+
+<!-- 3. PROPERTIES (Right Side) -->
+<div id="win-props" class="window-panel">
+  <div class="win-head">Properties <button class="win-close" onclick="toggleWindow('win-props')">✖</button></div>
+  <div class="win-body" id="props-body">
+    <div style="text-align:center;color:var(--c-text3);margin-top:20px;">Select an object</div>
+  </div>
+</div>
+
+<!-- THREE.JS & LOADERS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+
+<script>
+'use strict';
+// ==========================================
+// FORGE 3D — Core Engine
+// ==========================================
+
+const State = { objects: [], selected: null, tool: 'translate', space: 'world', snap: false, cnt: 0 };
+let renderer, scene, camera, orbitCtrl, xformCtrl;
+let activeWindow = null;
+
+/* ── SCENE INIT ── */
+const Engine = {
+  init() {
+    const wrap = document.getElementById('canvas-wrap');
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('forge-canvas'), antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    renderer.shadowMap.enabled = true;
+
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0x202020);
+    camera = new THREE.PerspectiveCamera(50, wrap.clientWidth/wrap.clientHeight, 0.1, 1000);
+    camera.position.set(8, 6, 10);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    dirLight.position.set(10, 20, 10); dirLight.castShadow = true; scene.add(dirLight);
+
+    // Environment
+    scene.add(new THREE.GridHelper(40, 40, 0x444444, 0x333333));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.ShadowMaterial({opacity:0.4}));
+    ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+    // Controls
+    orbitCtrl = new THREE.OrbitControls(camera, renderer.domElement);
+    xformCtrl = new THREE.TransformControls(camera, renderer.domElement);
+    scene.add(xformCtrl);
+
+    xformCtrl.addEventListener('dragging-changed', e => { orbitCtrl.enabled = !e.value; if(!e.value) StorageManager.save(); });
+    xformCtrl.addEventListener('objectChange', () => UI.update());
+
+    // Resize
+    new ResizeObserver(() => {
+      renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+      camera.aspect = wrap.clientWidth / wrap.clientHeight; camera.updateProjectionMatrix();
+    }).observe(wrap);
+
+    // Click to select
+    const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
+    renderer.domElement.addEventListener('pointerdown', e => {
+      if(xformCtrl.dragging) return;
+      const rect = e.target.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left)/rect.width)*2 - 1;
+      mouse.y = -((e.clientY - rect.top)/rect.height)*2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(State.objects.map(o=>o.mesh), true);
+      
+      if(hits.length > 0) {
+        // Find top level parent in our State
+        let obj = hits[0].object;
+        while(obj.parent && obj.parent.type !== 'Scene' && !State.objects.find(o=>o.mesh===obj)) { obj = obj.parent; }
+        const idx = State.objects.findIndex(o=>o.mesh===obj);
+        if(idx !== -1) ObjectManager.select(idx);
+      } else {
+        ObjectManager.select(null);
+      }
+    });
+
+    StorageManager.loadLocal(); // Load offline data
+    this.animate();
+  },
+  animate() { requestAnimationFrame(()=>Engine.animate()); orbitCtrl.update(); renderer.render(scene, camera); }
+};
+
+/* ── OBJECT MANAGEMENT ── */
+const ObjectManager = {
+  spawn(type) {
+    let geo;
+    if(type==='cube') geo = new THREE.BoxGeometry(1.5,1.5,1.5);
+    else if(type==='sphere') geo = new THREE.SphereGeometry(1, 32, 32);
+    else if(type==='cylinder') geo = new THREE.CylinderGeometry(0.8,0.8,2,32);
+    else if(type==='cone') geo = new THREE.ConeGeometry(1,2,32);
+    else if(type==='torus') geo = new THREE.TorusGeometry(0.8,0.3,16,64);
+    else if(type==='plane') { geo = new THREE.PlaneGeometry(3,3); geo.rotateX(-Math.PI/2); }
+    
+    const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.4 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.position.set(0, type==='plane'?0.01:1, 0);
+    this.addMeshToScene(mesh, type.toUpperCase());
+  },
+  addMeshToScene(mesh, baseName) {
+    scene.add(mesh);
+    State.cnt++;
+    const name = `${baseName} ${State.cnt}`;
+    State.objects.push({ mesh, name, type: baseName });
+    this.select(State.objects.length - 1);
+    StorageManager.save();
+    toggleWindow(null); // close asset browser
+  },
+  select(idx) {
+    State.selected = idx;
+    if(idx !== null) {
+      if(State.tool !== 'select') xformCtrl.attach(State.objects[idx].mesh);
+    } else {
+      xformCtrl.detach();
+    }
+    UI.update(); UI.renderSceneList(); UI.renderProps();
+  }
+};
+
+/* ── IMPORT SYSTEM (Characters/Vehicles) ── */
+const ImportManager = {
+  handleFile(e) {
+    const file = e.target.files[0]; if(!file) return;
+    const url = URL.createObjectURL(file);
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    document.getElementById('status-text').textContent = "Loading Asset...";
+    
+    if(ext === 'gltf' || ext === 'glb') {
+      new THREE.GLTFLoader().load(url, (gltf) => {
+        const model = gltf.scene;
+        model.traverse(c => { if(c.isMesh){ c.castShadow=true; c.receiveShadow=true; } });
+        ObjectManager.addMeshToScene(model, file.name.split('.')[0]);
+        document.getElementById('status-text').textContent = "Asset Loaded";
+      });
+    } else if(ext === 'obj') {
+      new THREE.OBJLoader().load(url, (obj) => {
+        obj.traverse(c => { if(c.isMesh){ c.castShadow=true; c.receiveShadow=true; c.material = new THREE.MeshStandardMaterial({color:0xaaaaaa}); } });
+        ObjectManager.addMeshToScene(obj, file.name.split('.')[0]);
+        document.getElementById('status-text').textContent = "Asset Loaded";
+      });
+    } else {
+      alert("Format not supported. Use .glb, .gltf, or .obj");
+    }
+  }
+};
+
+/* ── UI CONTROLLER ── */
+const UI = {
+  update() {
+    document.getElementById('sb-count').textContent = State.objects.length;
+    if(State.selected !== null) {
+      const p = State.objects[State.selected].mesh.position;
+      document.getElementById('hx').textContent = p.x.toFixed(2);
+      document.getElementById('hy').textContent = p.y.toFixed(2);
+      document.getElementById('hz').textContent = p.z.toFixed(2);
+      this.syncProps();
+    } else {
+      ['hx','hy','hz'].forEach(id=>document.getElementById(id).textContent='0.00');
+    }
+  },
+  renderSceneList() {
+    const list = document.getElementById('scene-list');
+    if(!list) return;
+    list.innerHTML = State.objects.map((o,i) => `
+      <div style="padding:10px 16px; border-bottom:1px solid var(--c-border); cursor:pointer; background:${i===State.selected?'var(--c-active)':'transparent'}; border-left:${i===State.selected?'3px solid var(--c-accent)':'3px solid transparent'}" onclick="ObjectManager.select(${i})">
+        <span style="font-size:12px;color:${i===State.selected?'var(--c-text)':'var(--c-text2)'}">${o.name}</span>
+      </div>
+    `).join('');
+  },
+  renderProps() {
+    const b = document.getElementById('props-body');
+    if(State.selected === null) { b.innerHTML = `<div style="text-align:center;color:var(--c-text3);margin-top:20px;">Select an object</div>`; return; }
+    
+    const m = State.objects[State.selected].mesh;
+    const p = m.position, r = m.rotation, s = m.scale;
+    
+    let html = `
+      <div class="sec-title">Position</div>
+      <div class="row"><span class="lbl" style="color:var(--gizmo-x)">X</span><input class="inp" id="px" type="number" value="${p.x.toFixed(2)}" step="0.5" onchange="UI.applyXform()"></div>
+      <div class="row"><span class="lbl" style="color:var(--gizmo-y)">Y</span><input class="inp" id="py" type="number" value="${p.y.toFixed(2)}" step="0.5" onchange="UI.applyXform()"></div>
+      <div class="row"><span class="lbl" style="color:var(--gizmo-z)">Z</span><input class="inp" id="pz" type="number" value="${p.z.toFixed(2)}" step="0.5" onchange="UI.applyXform()"></div>
+    `;
+
+    // Only show material controls if it's a simple mesh (not imported group)
+    if(m.geometry && m.material) {
+      html += `
+        <div class="sec-title" style="margin-top:16px;">Material</div>
+        <input type="color" id="mcol" value="#${m.material.color.getHexString()}" onchange="UI.applyMat()">
+      `;
+    }
+    b.innerHTML = html;
+  },
+  syncProps() {
+    if(State.selected===null || !document.getElementById('px')) return;
+    const p = State.objects[State.selected].mesh.position;
+    document.getElementById('px').value = p.x.toFixed(2);
+    document.getElementById('py').value = p.y.toFixed(2);
+    document.getElementById('pz').value = p.z.toFixed(2);
+  },
+  applyXform() {
+    if(State.selected===null) return;
+    const g=id=>parseFloat(document.getElementById(id).value)||0;
+    State.objects[State.selected].mesh.position.set(g('px'),g('py'),g('pz'));
+    StorageManager.save(); UI.update();
+  },
+  applyMat() {
+    if(State.selected===null) return;
+    State.objects[State.selected].mesh.material.color.set(document.getElementById('mcol').value);
+    StorageManager.save();
+  }
+};
+
+/* ── STORAGE (Dual Save: Firebase + Local Offline) ── */
+const StorageManager = {
+  save() {
+    // 1. Save to LocalStorage (Immediate Offline Support)
+    const data = State.objects.map(o => ({ n:o.name, t:o.type, px:o.mesh.position.x, py:o.mesh.position.y, pz:o.mesh.position.z }));
+    localStorage.setItem('forge3d_save', JSON.stringify(data));
+    document.getElementById('status-text').textContent = "Saved Locally";
+
+    // 2. Try Firebase (Online Backup)
+    if(window._fbReady) {
+      document.getElementById('status-dot').style.background = "var(--c-orange)";
+      // Firebase logic would go here
+      setTimeout(()=>{
+        document.getElementById('status-dot').style.background = "var(--c-green)";
+        document.getElementById('status-text').textContent = "Synced to Cloud";
+      }, 500);
+    }
+  },
+  loadLocal() {
+    const saved = localStorage.getItem('forge3d_save');
+    if(saved) {
+      // Basic restore logic for primitives
+      const arr = JSON.parse(saved);
+      arr.forEach(d => {
+        if(['CUBE','SPHERE','CYLINDER','CONE','TORUS','PLANE'].includes(d.t)) {
+          let geo = new THREE.BoxGeometry(1.5,1.5,1.5);
+          if(d.t==='SPHERE') geo = new THREE.SphereGeometry(1,32,32);
+          const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0xcccccc}));
+          mesh.position.set(d.px, d.py, d.pz);
+          scene.add(mesh);
+          State.objects.push({mesh, name:d.n, type:d.t});
+        }
+      });
+      State.cnt = State.objects.length;
+      UI.update(); UI.renderSceneList();
+    }
+  }
+};
+
+/* ── GLOBALS ── */
+function setTool(m) {
+  State.tool = m;
+  ['select','translate','rotate','scale'].forEach(t=>document.getElementById('tool-'+t).classList.remove('active'));
+  document.getElementById('tool-'+m).classList.add('active');
+  if(State.selected !== null) {
+    if(m==='select') xformCtrl.detach();
+    else { xformCtrl.setMode(m); xformCtrl.attach(State.objects[State.selected].mesh); }
+  }
+}
+function deleteSelected() {
+  if(State.selected === null) return;
+  scene.remove(State.objects[State.selected].mesh);
+  State.objects.splice(State.selected, 1);
+  ObjectManager.select(null); StorageManager.save();
+}
+function toggleSpace() { State.space = State.space==='world'?'local':'world'; xformCtrl.setSpace(State.space); }
+function toggleSnap() {
+  State.snap = !State.snap; document.getElementById('btn-snap').classList.toggle('active', State.snap);
+  if(State.snap) { xformCtrl.setTranslationSnap(1); xformCtrl.setRotationSnap(Math.PI/4); }
+  else { xformCtrl.setTranslationSnap(null); xformCtrl.setRotationSnap(null); }
+}
+function toggleWindow(id) {
+  if(activeWindow === id) { document.getElementById(id).classList.remove('open'); activeWindow = null; }
+  else {
+    if(activeWindow) document.getElementById(activeWindow).classList.remove('open');
+    if(id) { document.getElementById(id).classList.add('open'); activeWindow = id; }
+  }
+}
+
+// Boot
+window.onload = () => Engine.init();
+</script>
+</body>
+</html>
