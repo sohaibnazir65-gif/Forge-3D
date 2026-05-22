@@ -1,382 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<title>FORGE 3D — Vehicle & Character Controller</title>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0f1117; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; }
-  canvas { display: block; outline: none; }
-
-  #hud {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px; padding: 12px 24px; color: #e4e8f5;
-    display: flex; gap: 20px; align-items: center;
-    backdrop-filter: blur(8px); pointer-events: none;
-  }
-  .key {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border-radius: 6px;
-    background: rgba(79,142,247,0.2); border: 1px solid rgba(79,142,247,0.5);
-    color: #4f8ef7; font-weight: 700; font-size: 12px;
-  }
-  .key-row { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .key-arrows { display: grid; grid-template-columns: repeat(3, 28px); gap: 3px; }
-  .key-lbl { font-size: 9px; color: #7a85a3; letter-spacing: 0.5px; }
-
-  #info {
-    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px; padding: 8px 18px; color: #7a85a3; font-size: 11px;
-    backdrop-filter: blur(8px); text-align: center; max-width: 500px;
-  }
-  #info span { color: #4f8ef7; font-weight: 600; }
-
-  #speed-bar {
-    position: fixed; top: 60px; left: 20px;
-    background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px; padding: 10px 14px; color: #e4e8f5; font-size: 11px;
-    backdrop-filter: blur(8px); min-width: 130px;
-  }
-  .bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-  .bar-bg { flex: 1; height: 5px; background: #1e2230; border-radius: 3px; }
-  .bar-fill { height: 100%; border-radius: 3px; background: #4f8ef7; transition: width 0.1s; width: 0%; }
-
-  #drop-zone {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    display: flex; align-items: center; justify-content: center;
-    z-index: 100; pointer-events: none;
-  }
-  #drop-msg {
-    background: rgba(15,17,23,0.92); border: 2px dashed rgba(79,142,247,0.4);
-    border-radius: 16px; padding: 40px 60px; text-align: center; color: #7a85a3;
-    font-size: 15px; line-height: 2.2;
-  }
-  #drop-msg span { color: #4f8ef7; font-weight: 700; font-size: 17px; }
-  #drop-msg small { display: block; font-size: 11px; color: #4a5270; margin-top: 4px; }
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>FORGE 3D — Integrated Controller</title>
+  <style>
+    body { margin: 0; background: #0f1117; overflow: hidden; }
+    canvas { display: block; }
+    /* Touch UI Styles */
+    #touch-ui { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 100; }
+    #joy-zone { position: fixed; bottom: 30px; left: 30px; width: 130px; height: 130px; pointer-events: auto; }
+    #joy-base { width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.15); backdrop-filter: blur(10px); }
+    #joy-knob { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: rgba(79,142,247,0.45); top: 50%; left: 50%; transform: translate(-50%, -50%); transition: transform 0.05s; }
+  </style>
 </head>
 <body>
-
-<div id="drop-zone">
-  <div id="drop-msg">
-    <span>🚗 FORGE 3D — Controller</span><br>
-    Drop a <strong style="color:#22d3a5">.glb</strong> or <strong style="color:#22d3a5">.gltf</strong> file here<br>
-    <small>Vehicle, character, robot — anything rigged or not</small>
+  <div id="touch-ui">
+    <div id="joy-zone"><div id="joy-base"><div id="joy-knob"></div></div></div>
   </div>
-</div>
 
-<div id="info" style="display:none">
-  Model: <span id="model-name">none</span> &nbsp;|&nbsp;
-  Bones: <span id="bone-count">0</span> &nbsp;|&nbsp;
-  Anims: <span id="anim-count">0</span>
-</div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
-<div id="speed-bar" style="display:none">
-  <div style="font-size:9px;color:#4a5270;font-weight:700;letter-spacing:1px">SPEED</div>
-  <div class="bar-row">
-    <div class="bar-bg"><div class="bar-fill" id="spd-fill"></div></div>
-    <span id="spd-val" style="font-family:monospace;font-size:10px;color:#4f8ef7;width:38px">0.0</span>
-  </div>
-  <div style="font-size:9px;color:#4a5270;font-weight:700;letter-spacing:1px;margin-top:8px">DIRECTION</div>
-  <div style="font-family:monospace;font-size:11px;color:#22d3a5;margin-top:3px" id="dir-lbl">Idle</div>
-</div>
+  <script>
+    // 1. Setup Scene
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+    camera.position.set(0, 2, 5);
 
-<div id="hud">
-  <div>
-    <div class="key-lbl" style="margin-bottom:4px;text-align:center">MOVE</div>
-    <div class="key-arrows">
-      <div></div><div class="key">W</div><div></div>
-      <div class="key">A</div><div class="key">S</div><div class="key">D</div>
-    </div>
-  </div>
-  <div style="width:1px;height:40px;background:rgba(255,255,255,0.08)"></div>
-  <div>
-    <div class="key-lbl" style="margin-bottom:4px;text-align:center">CAMERA</div>
-    <div style="font-size:10px;color:#7a85a3;line-height:1.8">
-      🖱 Drag — Orbit<br>
-      🖱 Scroll — Zoom<br>
-      <span style="color:#4f8ef7">C</span> — Camera toggle
-    </div>
-  </div>
-  <div style="width:1px;height:40px;background:rgba(255,255,255,0.08)"></div>
-  <div>
-    <div class="key-lbl" style="margin-bottom:4px;text-align:center">EXTRAS</div>
-    <div style="font-size:10px;color:#7a85a3;line-height:1.8">
-      <span style="color:#4f8ef7">B</span> — Bones toggle<br>
-      <span style="color:#4f8ef7">R</span> — Reset position<br>
-      <span style="color:#4f8ef7">Space</span> — Jump
-    </div>
-  </div>
-</div>
+    // 2. Character Logic
+    let character = new THREE.Mesh(new THREE.BoxGeometry(1,2,1), new THREE.MeshBasicMaterial({color: 0x4f8ef7}));
+    scene.add(character);
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    // 3. Joystick Logic
+    let joyX = 0, joyY = 0;
+    const knob = document.getElementById('joy-knob');
+    document.getElementById('joy-zone').addEventListener('touchmove', (e) => {
+      let t = e.touches[0];
+      let rect = document.getElementById('joy-base').getBoundingClientRect();
+      let dx = t.clientX - (rect.left + 65);
+      let dy = t.clientY - (rect.top + 65);
+      let dist = Math.min(Math.sqrt(dx*dx + dy*dy), 40);
+      let angle = Math.atan2(dy, dx);
+      knob.style.transform = `translate(${Math.cos(angle)*dist - 25}px, ${Math.sin(angle)*dist - 25}px)`;
+      joyX = dx/40; joyY = -dy/40;
+    });
+    document.getElementById('joy-zone').addEventListener('touchend', () => {
+      knob.style.transform = 'translate(-50%, -50%)';
+      joyX = 0; joyY = 0;
+    });
 
-<script>
-'use strict';
-
-// ── CONFIG ──────────────────
-const CFG = {
-  moveSpeed:    0.05,   
-  turnSpeed:    0.03,   
-  jumpForce:    0.18,
-  gravity:      0.008,
-  cameraOffset: new THREE.Vector3(0, 3, 7), 
-  groundY:      0,
-};
-
-// ── SCENE ─────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
-document.body.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0d1020);
-scene.fog = new THREE.Fog(0x0d1020, 30, 90);
-
-const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.05, 500);
-camera.position.set(0, 4, 9);
-
-// ── LIGHTS ────────────────────────────────
-const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
-scene.add(ambLight);
-
-const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.8);
-sunLight.position.set(12, 22, 10);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-sunLight.shadow.camera.left = -30;
-sunLight.shadow.camera.right = 30;
-sunLight.shadow.camera.top = 30;
-sunLight.shadow.camera.bottom = -30;
-sunLight.shadow.bias = -0.001;
-scene.add(sunLight);
-
-const fillLight = new THREE.DirectionalLight(0x5577ff, 0.4);
-fillLight.position.set(-10, 5, -10);
-scene.add(fillLight);
-
-// ── GROUND ────────────────────────────────
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1e2e, roughness: 0.95, metalness: 0 });
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-const grid = new THREE.GridHelper(200, 80, 0x2a2f45, 0x1e2335);
-grid.position.y = 0.01;
-scene.add(grid);
-
-(function addRoad() {
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0x151822, roughness: 0.9 });
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(6, 200), roadMat);
-  road.rotation.x = -Math.PI / 2;
-  road.position.y = 0.005;
-  road.receiveShadow = true;
-  scene.add(road);
-})();
-
-// ── ORBIT CONTROLS ──────────
-const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-orbit.enableDamping = true;
-orbit.dampingFactor = 0.08;
-orbit.enabled = false;
-
-// ── STATE ─────────────────────────────────
-const state = {
-  model: null,
-  mixer: null,
-  actions: {},
-  currentAnim: null,
-  skeleton: null,
-  showBones: false,
-  velocity: 0,
-  yVel: 0,
-  onGround: true,
-  followCamera: true,
-  keys: {},
-};
-
-// ── KEYBOARD ─────────────────────────────
-window.addEventListener('keydown', e => {
-  state.keys[e.code] = true;
-
-  if (e.code === 'Space' && state.onGround && state.model) {
-    state.yVel = CFG.jumpForce;
-    state.onGround = false;
-    e.preventDefault();
-  }
-  if (e.code === 'KeyB') toggleBones();
-  if (e.code === 'KeyC') {
-    state.followCamera = !state.followCamera;
-    orbit.enabled = !state.followCamera;
-    orbit.target.set(0, 1, 0);
-  }
-  if (e.code === 'KeyR' && state.model) {
-    state.model.position.set(0, 0, 0);
-    state.velocity = 0;
-  }
-});
-window.addEventListener('keyup', e => { state.keys[e.code] = false; });
-
-// ── LOAD GLTF ─────────────────────────────
-function loadModel(url, fileName) {
-  if (state.model) {
-    scene.remove(state.model);
-    if (state.skeleton) scene.remove(state.skeleton);
-    if (state.mixer) state.mixer.stopAllAction();
-    state.model = state.skeleton = state.mixer = null;
-    state.actions = {};
-    state.currentAnim = null;
-  }
-
-  new THREE.GLTFLoader().load(
-    url,
-    function (gltf) {
-      const model = gltf.scene;
-
-      const box = new THREE.Box3().setFromObject(model);
-      const size = box.getSize(new THREE.Vector3());
-      const scale = 2.5 / (size.y || 1);
-      model.scale.setScalar(scale);
-
-      const box2 = new THREE.Box3().setFromObject(model);
-      model.position.y = -box2.min.y;
-
-      model.traverse(c => {
-        if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
-      });
-
-      scene.add(model);
-      state.model = model;
-
-      state.skeleton = new THREE.SkeletonHelper(model);
-      state.skeleton.material.linewidth = 2;
-      state.skeleton.material.depthTest = false;
-      state.skeleton.visible = false;
-      scene.add(state.skeleton);
-
-      const clips = gltf.animations || [];
-      if (clips.length > 0) {
-        state.mixer = new THREE.AnimationMixer(model);
-        clips.forEach(clip => {
-          state.actions[clip.name] = state.mixer.clipAction(clip);
-        });
-        state.actions[clips[0].name].play();
-        state.currentAnim = clips[0].name;
-      }
-
-      let boneCount = 0;
-      model.traverse(c => { if (c.isBone) boneCount++; });
-
-      document.getElementById('drop-zone').style.display = 'none';
-      document.getElementById('info').style.display = 'block';
-      document.getElementById('speed-bar').style.display = 'block';
-      document.getElementById('model-name').textContent = fileName;
-      document.getElementById('bone-count').textContent = boneCount;
-      document.getElementById('anim-count').textContent = clips.length;
-    },
-    undefined,
-    function (err) {
-      alert('Load error: ' + (err.message || err));
+    // 4. Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      character.position.x += joyX * 0.1;
+      character.position.z -= joyY * 0.1;
+      renderer.render(scene, camera);
     }
-  );
-}
-
-// ── TOGGLE BONES ─────────────────────────
-function toggleBones() {
-  if (!state.skeleton) return;
-  state.showBones = !state.showBones;
-  state.skeleton.visible = state.showBones;
-}
-
-// ── DRAG & DROP ───────────────────────────
-document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (ext !== 'glb' && ext !== 'gltf') { alert('Drop a .glb or .gltf file'); return; }
-  loadModel(URL.createObjectURL(file), file.name);
-});
-
-// ── GAME LOOP ─────────────────────────────
-const clock = new THREE.Clock();
-
-function update() {
-  if (!state.model) return;
-  const m = state.model;
-
-  if (state.keys['KeyW'] || state.keys['ArrowUp']) {
-    state.velocity = Math.min(state.velocity + 0.008, CFG.moveSpeed);
-  } else if (state.keys['KeyS'] || state.keys['ArrowDown']) {
-    state.velocity = Math.max(state.velocity - 0.008, -CFG.moveSpeed * 0.5);
-  } else {
-    state.velocity *= 0.85;
-    if (Math.abs(state.velocity) < 0.0001) state.velocity = 0;
-  }
-
-  const spd = Math.abs(state.velocity);
-  if (state.keys['KeyA'] || state.keys['ArrowLeft'])
-    m.rotation.y += CFG.turnSpeed * (spd > 0.005 ? 1 : 0.3);
-  if (state.keys['KeyD'] || state.keys['ArrowRight'])
-    m.rotation.y -= CFG.turnSpeed * (spd > 0.005 ? 1 : 0.3);
-
-  if (state.velocity !== 0) {
-    m.position.x -= Math.sin(m.rotation.y) * state.velocity;
-    m.position.z -= Math.cos(m.rotation.y) * state.velocity;
-  }
-
-  if (!state.onGround) {
-    state.yVel -= CFG.gravity;
-    m.position.y += state.yVel;
-    if (m.position.y <= CFG.groundY) {
-      m.position.y = CFG.groundY;
-      state.yVel = 0;
-      state.onGround = true;
-    }
-  }
-
-  if (state.followCamera) {
-    const offset = CFG.cameraOffset.clone();
-    offset.applyEuler(new THREE.Euler(0, m.rotation.y, 0));
-    camera.position.lerp(m.position.clone().add(offset), 0.08);
-    camera.lookAt(m.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
-  }
-
-  const pct = Math.round((spd / CFG.moveSpeed) * 100);
-  document.getElementById('spd-fill').style.width = pct + '%';
-  document.getElementById('spd-val').textContent = (spd * 100).toFixed(1);
-  document.getElementById('dir-lbl').textContent =
-    spd < 0.001 ? 'Idle' : state.velocity > 0 ? '▲ Forward' : '▼ Reverse';
-}
-
-(function loop() {
-  requestAnimationFrame(loop);
-  const delta = clock.getDelta();
-  update();
-  orbit.update();
-  if (state.mixer) state.mixer.update(delta);
-  renderer.render(scene, camera);
-})();
-
-window.addEventListener('resize', () => {
-  renderer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-});
-</script>
+    animate();
+  </script>
 </body>
 </html>
